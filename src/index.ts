@@ -1,15 +1,21 @@
 import { MathRNG } from "./game/MathRNG.js";
-import { createGrid } from "./game/createGrid.js";
-import { createReels } from "./game/createReels.js";
-import { classic96 } from "./game/math/rtp96.js";
+import { SlotMachine } from "./game/SlotMachine.js";
+
+import { rtp96 } from "./game/math/rtp96.js";
 
 const rng = new MathRNG();
 
-const reels = createReels(classic96, rng);
+const machine = new SlotMachine(
+  rtp96,
+  rng,
+);
 
-const stops = reels.map((reel) => reel.spin());
+const result = machine.spin(1);
 
-const grid = createGrid(reels, stops);
+console.log("Stops:", result.stops);
 
-console.log("Stops:", stops);
-console.table(grid);
+console.table(result.grid);
+
+console.log("Wins:", result.wins);
+
+console.log("Total win:", result.totalWin);
