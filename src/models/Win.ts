@@ -5,5 +5,6 @@ export interface Win {
   symbol: SymbolId;
   count: number;
   multiplier: number;
+  /** Integer minor units (cents), never a float. */
   amount: number;
 }

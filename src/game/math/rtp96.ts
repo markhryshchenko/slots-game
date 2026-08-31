@@ -82,31 +82,31 @@ export const rtp96: MathConfig = {
       {
         symbol: SYMBOLS.CHERRY,
         payouts: {
-          3: 5,
+          3: 6,
         },
       },
       {
         symbol: SYMBOLS.LEMON,
         payouts: {
-          3: 10,
+          3: 12,
         },
       },
       {
         symbol: SYMBOLS.BELL,
         payouts: {
-          3: 20,
+          3: 25,
         },
       },
       {
         symbol: SYMBOLS.STAR,
         payouts: {
-          3: 50,
+          3: 75,
         },
       },
       {
         symbol: SYMBOLS.SEVEN,
         payouts: {
-          3: 100,
+          3: 200,
         },
       },
     ],

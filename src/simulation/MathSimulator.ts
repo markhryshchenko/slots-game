@@ -1,4 +1,5 @@
 import { SlotMachine } from "../game/SlotMachine.js";
+import { fromCents, toCents } from "../game/money.js";
 import type { SimulationResult } from "./SimulationResult.js";
 
 export class MathSimulator {
@@ -18,41 +19,43 @@ export class MathSimulator {
       throw new Error("Bet must be greater than zero");
     }
 
-    let totalBet = 0;
-    let totalWin = 0;
+    const betCents = toCents(betPerSpin);
+
+    let totalBetCents = 0;
+    let totalWinCents = 0;
     let winningSpins = 0;
-    let maxWin = 0;
+    let maxWinCents = 0;
 
     for (let i = 0; i < spins; i++) {
       const result = this.machine.spin(betPerSpin);
 
-      totalBet += betPerSpin;
-      totalWin += result.totalWin;
+      totalBetCents += betCents;
+      totalWinCents += result.totalWin;
 
       if (result.totalWin > 0) {
         winningSpins++;
       }
 
-      if (result.totalWin > maxWin) {
-        maxWin = result.totalWin;
+      if (result.totalWin > maxWinCents) {
+        maxWinCents = result.totalWin;
       }
     }
 
     return {
       spins,
-      totalBet,
-      totalWin,
+      totalBet: fromCents(totalBetCents),
+      totalWin: fromCents(totalWinCents),
 
-      rtp: totalWin / totalBet,
+      rtp: totalWinCents / totalBetCents,
 
       hitRate: winningSpins / spins,
 
       averageWin:
         winningSpins === 0
           ? 0
-          : totalWin / winningSpins,
+          : fromCents(totalWinCents / winningSpins),
 
-      maxWin,
+      maxWin: fromCents(maxWinCents),
     };
   }
 }
