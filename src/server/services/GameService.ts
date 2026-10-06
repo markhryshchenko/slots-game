@@ -1,49 +1,48 @@
+import type { GameConfig } from "../../games/GameConfig.js";
 import { SlotMachine } from "../../game/SlotMachine.js";
 import { MathRNG } from "../../game/MathRNG.js";
-import { rtp96LowVolatility } from "../../game/math/rtp96LowVolatility.js";
-import { fromCents, toCents } from "../../game/money.js";
+import { sevenSlice } from "../../games/sevenslice.js";
+import { validateGameConfig } from "../../games/validateGameConfig.js";
 
 export class GameService {
   private readonly machine: SlotMachine;
-  private balanceCents: number;
+  private balanceCents = 100_000; // demo starting balance: $1,000.00
 
-  constructor() {
-    this.machine = new SlotMachine(rtp96LowVolatility, new MathRNG());
-    this.balanceCents = toCents(1000); // demo starting balance
+  constructor(private readonly game: GameConfig) {
+    validateGameConfig(game);
+    this.machine = new SlotMachine(game.mathProfile, new MathRNG());
   }
 
-  spin(bet: number) {
-    const betCents = toCents(bet);
-
-    if (betCents <= 0) {
-      throw new Error("Bet must be greater than zero");
+  spin(betCents: number) {
+    if (!this.game.betLevels.includes(betCents)) {
+      throw new Error("Bet is not one of the allowed bet levels");
     }
 
     if (betCents > this.balanceCents) {
       throw new Error("Insufficient balance");
     }
 
-    const result = this.machine.spin(bet);
+    const result = this.machine.spin(betCents);
 
     this.balanceCents = this.balanceCents - betCents + result.totalWin;
 
     return {
-      spinResult: {
-        stops: result.stops,
-        grid: result.grid,
-        wins: result.wins.map((win) => ({
-          ...win,
-          amount: fromCents(win.amount),
-        })),
-        totalWin: fromCents(result.totalWin),
-      },
-      balance: fromCents(this.balanceCents),
+      currency: this.game.currency,
+      bet: betCents,
+      totalWin: result.totalWin,
+      balance: this.balanceCents,
+      stops: result.stops,
+      grid: result.grid,
+      wins: result.wins,
     };
   }
 
-  getBalance(): number {
-    return fromCents(this.balanceCents);
+  getBalance() {
+    return {
+      balance: this.balanceCents,
+      currency: this.game.currency,
+    };
   }
 }
 
-export const gameService = new GameService();
+export const gameService = new GameService(sevenSlice);

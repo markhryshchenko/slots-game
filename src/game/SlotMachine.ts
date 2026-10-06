@@ -23,9 +23,9 @@ export class SlotMachine {
       );
     }
   
-    spin(totalBet: number): SpinResult {
+    spin(betCents: number): SpinResult {
       const bet = createBet(
-        totalBet,
+        betCents,
         this.config.paylines.length,
       );
   

@@ -1,8 +1,8 @@
 export const SYMBOLS = {
     CHERRY: "CHERRY",
     LEMON: "LEMON",
-    BELL: "BELL",
-    STAR: "STAR",
+    PLUM: "PLUM",
+    WATERMELON: "WATERMELON",
     SEVEN: "SEVEN",
   } as const;
   

@@ -1,7 +1,8 @@
-export function toCents(amount: number): number {
-  return Math.round(amount * 100);
-}
-
+/**
+ * Converts minor units to major units for human-readable reports only.
+ * Assumes a 2-decimal currency (USD, EUR); zero-decimal (JPY) and
+ * three-decimal (KWD) currencies need a per-currency exponent.
+ */
 export function fromCents(cents: number): number {
   return cents / 100;
 }

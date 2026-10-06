@@ -1,22 +1,27 @@
 import type { Bet } from "../models/Bet.js";
-import { toCents } from "./money.js";
 
 export function createBet(
-  totalBet: number,
+  totalCents: number,
   paylinesCount: number,
 ): Bet {
-  if (!Number.isFinite(totalBet) || totalBet <= 0) {
-    throw new Error("Total bet must be greater than zero");
-  }
-
   if (!Number.isInteger(paylinesCount) || paylinesCount <= 0) {
     throw new Error("Paylines count must be greater than zero");
   }
 
-  const totalCents = toCents(totalBet);
+  if (!Number.isInteger(totalCents) || totalCents <= 0) {
+    throw new Error("Total bet must be a positive integer amount of cents");
+  }
+
+  // A bet that does not split evenly across lines would silently lose
+  // the remainder, so it is rejected instead of rounded.
+  if (totalCents % paylinesCount !== 0) {
+    throw new Error(
+      `Total bet ${totalCents} must be divisible by ${paylinesCount} paylines`,
+    );
+  }
 
   return {
     total: totalCents,
-    line: Math.floor(totalCents / paylinesCount),
+    line: totalCents / paylinesCount,
   };
 }

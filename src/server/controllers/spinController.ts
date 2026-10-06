@@ -2,10 +2,12 @@ import type { Request, Response } from "express";
 import { gameService } from "../services/GameService.js";
 
 export function spinController(req: Request, res: Response): void {
-  const bet = Number(req.body?.bet);
+  const bet: unknown = req.body?.bet;
 
-  if (!Number.isFinite(bet) || bet <= 0) {
-    res.status(400).json({ error: "bet must be a positive number" });
+  if (typeof bet !== "number" || !Number.isInteger(bet) || bet <= 0) {
+    res
+      .status(400)
+      .json({ error: "bet must be a positive integer amount in cents" });
     return;
   }
 

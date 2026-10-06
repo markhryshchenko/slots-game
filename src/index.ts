@@ -18,7 +18,7 @@ const machine = new SlotMachine(
   rng,
 );
 
-const result = machine.spin(1);
+const result = machine.spin(100);
 
 console.log("Stops:", result.stops);
 
@@ -35,7 +35,7 @@ const simulator = new MathSimulator(machine);
 
 const resSim = simulator.run(
   1_000_000,
-  1,
+  100,
 );
 
 console.table(resSim);

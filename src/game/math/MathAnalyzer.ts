@@ -36,7 +36,8 @@ export class MathAnalyzer {
     const combinations = generateStopCombinations(reelSizes);
     const totalOutcomes = combinations.length;
 
-    const bet = createBet(1, this.config.paylines.length);
+    // $1 bet (100 cents), so expected win in dollars equals RTP.
+    const bet = createBet(100, this.config.paylines.length);
 
     // Accumulated in cents (integers) for the whole loop; converted to
     // dollars only once at the end, so summing 1000+ outcomes never

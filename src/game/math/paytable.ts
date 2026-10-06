@@ -15,13 +15,13 @@ export const paytable: Paytable = [
     },
   },
   {
-    symbol: SYMBOLS.BELL,
+    symbol: SYMBOLS.PLUM,
     payouts: {
       3: 20,
     },
   },
   {
-    symbol: SYMBOLS.STAR,
+    symbol: SYMBOLS.WATERMELON,
     payouts: {
       3: 50,
     },

@@ -1,5 +1,5 @@
 import { SlotMachine } from "../game/SlotMachine.js";
-import { fromCents, toCents } from "../game/money.js";
+import { fromCents } from "../game/money.js";
 import type { SimulationResult } from "./SimulationResult.js";
 
 export class MathSimulator {
@@ -9,17 +9,15 @@ export class MathSimulator {
 
   run(
     spins: number,
-    betPerSpin: number,
+    betCents: number,
   ): SimulationResult {
     if (!Number.isInteger(spins) || spins <= 0) {
       throw new Error("Spins must be a positive integer");
     }
 
-    if (!Number.isFinite(betPerSpin) || betPerSpin <= 0) {
-      throw new Error("Bet must be greater than zero");
+    if (!Number.isInteger(betCents) || betCents <= 0) {
+      throw new Error("Bet must be a positive integer amount of cents");
     }
-
-    const betCents = toCents(betPerSpin);
 
     let totalBetCents = 0;
     let totalWinCents = 0;
@@ -27,7 +25,7 @@ export class MathSimulator {
     let maxWinCents = 0;
 
     for (let i = 0; i < spins; i++) {
-      const result = this.machine.spin(betPerSpin);
+      const result = this.machine.spin(betCents);
 
       totalBetCents += betCents;
       totalWinCents += result.totalWin;
