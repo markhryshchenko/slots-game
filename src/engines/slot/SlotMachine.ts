@@ -1,6 +1,6 @@
 import type { MathConfig } from "./MathConfig.js";
-import type { SpinResult } from "../models/SpinResult.js";
-import type { RNG } from "./RNG.js";
+import type { SpinResult } from "../../models/SpinResult.js";
+import type { RNG } from "../../core/RNG.js";
 
 import { createGrid } from "./createGrid.js";
 import { createReels } from "./createReels.js";

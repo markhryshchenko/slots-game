@@ -1,5 +1,5 @@
 import { Reel } from "./Reel.js";
-import type { RNG } from "./RNG.js";
+import type { RNG } from "../../core/RNG.js";
 import type { MathConfig } from "./MathConfig.js";
 
 export function createReels(

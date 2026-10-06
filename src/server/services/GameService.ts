@@ -1,7 +1,7 @@
 import type { GameConfig } from "../../games/GameConfig.js";
-import { SlotMachine } from "../../game/SlotMachine.js";
-import { MathRNG } from "../../game/MathRNG.js";
-import { sevenSlice } from "../../games/sevenslice.js";
+import { SlotMachine } from "../../engines/slot/SlotMachine.js";
+import { MathRNG } from "../../core/MathRNG.js";
+import { sevenSlice } from "../../games/sevenslice/config.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
 
 export class GameService {

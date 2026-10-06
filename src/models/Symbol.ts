@@ -1,9 +1,5 @@
-export const SYMBOLS = {
-    CHERRY: "CHERRY",
-    LEMON: "LEMON",
-    PLUM: "PLUM",
-    WATERMELON: "WATERMELON",
-    SEVEN: "SEVEN",
-  } as const;
-  
-  export type SymbolId = typeof SYMBOLS[keyof typeof SYMBOLS];
+/**
+ * The engine treats symbols as opaque strings. Each game declares its own
+ * symbol set (e.g. src/games/sevenslice/symbols.ts).
+ */
+export type SymbolId = string;

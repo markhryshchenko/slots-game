@@ -1,7 +1,7 @@
-import type { MathConfig } from "../MathConfig.js";
-import { SYMBOLS } from "../../models/Symbol.js";
+import type { MathConfig } from "../../../engines/slot/MathConfig.js";
+import { SYMBOLS, type SevenSliceSymbol } from "../symbols.js";
 
-export const rtp96: MathConfig = {
+export const rtp96: MathConfig<SevenSliceSymbol> = {
     id: "rtp-96",
     targetRtp: 0.96,
   

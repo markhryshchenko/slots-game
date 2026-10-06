@@ -1,5 +1,5 @@
-import type { Grid } from "../models/Grid.js";
-import type { SymbolId } from "../models/Symbol.js";
+import type { Grid } from "../../models/Grid.js";
+import type { SymbolId } from "../../models/Symbol.js";
 import type { Reel } from "./Reel.js";
 
 export function createGrid(
@@ -15,7 +15,11 @@ export function createGrid(
     for (let row = 0; row < 3; row++) {
       const currentRow = reels.map((reel, reelIndex) => {
         const stop = stops[reelIndex];
-  
+
+        if (stop === undefined) {
+          throw new Error(`No stop position for reel ${reelIndex}`);
+        }
+
         return reel.getSymbolAtOffset(stop, row - 1);
       });
   

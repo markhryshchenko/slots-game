@@ -1,9 +1,11 @@
-import type { GameConfig } from "./GameConfig.js";
-import { rtp96LowVolatility } from "../game/math/rtp96LowVolatility.js";
+import type { GameConfig } from "../GameConfig.js";
+import { rtp96LowVolatility } from "./math/rtp96LowVolatility.js";
+import { SYMBOLS } from "./symbols.js";
 
 export const sevenSlice: GameConfig = {
   gameId: "sevenslice",
   currency: "usd",
+  symbols: Object.values(SYMBOLS),
   mathProfile: rtp96LowVolatility,
   betLevels: [
     5, 10, 15, 20, 25, 30, 35, 40, 45, 50, // step 5¢ up to $0.50

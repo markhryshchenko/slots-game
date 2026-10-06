@@ -1,5 +1,5 @@
-import type { SymbolId } from "../../models/Symbol.js";
-import type { SymbolProbability } from "../../models/SymbolProbability.js";
+import type { SymbolId } from "../../../models/Symbol.js";
+import type { SymbolProbability } from "../../../models/SymbolProbability.js";
 
 export class ReelAnalyzer {
   analyze(

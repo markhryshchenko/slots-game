@@ -1,12 +1,12 @@
-import { MathRNG } from "./game/MathRNG.js";
-import { SlotMachine } from "./game/SlotMachine.js";
-import { ReelAnalyzer } from "./game/math/ReelAnalyzer.js";
-import { MathAnalyzer } from "./game/math/MathAnalyzer.js";
+import { MathRNG } from "./core/MathRNG.js";
+import { SlotMachine } from "./engines/slot/SlotMachine.js";
+import { ReelAnalyzer } from "./engines/slot/analysis/ReelAnalyzer.js";
+import { MathAnalyzer } from "./engines/slot/analysis/MathAnalyzer.js";
 
-import { rtp96 } from "./game/math/rtp96.js";
-import { rtp96LowVolatility } from "./game/math/rtp96LowVolatility.js";
-import { rtp96HighVolatility } from "./game/math/rtp96HighVolatility.js";
-import { fromCents } from "./game/money.js";
+import { rtp96 } from "./games/sevenslice/math/rtp96.js";
+import { rtp96LowVolatility } from "./games/sevenslice/math/rtp96LowVolatility.js";
+import { rtp96HighVolatility } from "./games/sevenslice/math/rtp96HighVolatility.js";
+import { fromCents } from "./core/money.js";
 import { MathSimulator } from "./simulation/MathSimulator.js";
 
 const rng = new MathRNG();

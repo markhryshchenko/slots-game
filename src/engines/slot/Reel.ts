@@ -1,5 +1,5 @@
-import type { RNG } from "./RNG.js";
-import type { SymbolId } from "../models/Symbol.js";
+import type { RNG } from "../../core/RNG.js";
+import type { SymbolId } from "../../models/Symbol.js";
 
 export class Reel {
   constructor(

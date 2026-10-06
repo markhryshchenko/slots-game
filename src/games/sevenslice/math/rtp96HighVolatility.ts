@@ -1,8 +1,8 @@
-import type { MathConfig } from "../MathConfig.js";
-import { SYMBOLS } from "../../models/Symbol.js";
+import type { MathConfig } from "../../../engines/slot/MathConfig.js";
+import { SYMBOLS, type SevenSliceSymbol } from "../symbols.js";
 
-export const rtp96LowVolatility: MathConfig = {
-  id: "rtp-96-low-volatility",
+export const rtp96HighVolatility: MathConfig<SevenSliceSymbol> = {
+  id: "rtp-96-high-volatility",
   targetRtp: 0.96,
 
   reels: [
@@ -64,10 +64,10 @@ export const rtp96LowVolatility: MathConfig = {
   ],
 
   paytable: [
-    { symbol: SYMBOLS.CHERRY, payouts: { 3: 14 } },
-    { symbol: SYMBOLS.LEMON, payouts: { 3: 14 } },
-    { symbol: SYMBOLS.PLUM, payouts: { 3: 20 } },
-    { symbol: SYMBOLS.WATERMELON, payouts: { 3: 22 } },
-    { symbol: SYMBOLS.SEVEN, payouts: { 3: 22 } },
+    { symbol: SYMBOLS.CHERRY, payouts: { 3: 1 } },
+    { symbol: SYMBOLS.LEMON, payouts: { 3: 1 } },
+    { symbol: SYMBOLS.PLUM, payouts: { 3: 2 } },
+    { symbol: SYMBOLS.WATERMELON, payouts: { 3: 5 } },
+    { symbol: SYMBOLS.SEVEN, payouts: { 3: 885 } },
   ],
 };

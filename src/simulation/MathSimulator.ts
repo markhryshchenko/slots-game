@@ -1,5 +1,5 @@
-import { SlotMachine } from "../game/SlotMachine.js";
-import { fromCents } from "../game/money.js";
+import { SlotMachine } from "../engines/slot/SlotMachine.js";
+import { fromCents } from "../core/money.js";
 import type { SimulationResult } from "./SimulationResult.js";
 
 export class MathSimulator {

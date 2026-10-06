@@ -1,12 +1,12 @@
 import type { MathConfig } from "../MathConfig.js";
-import type { MathReport } from "../../models/MathReport.js";
+import type { MathReport } from "../../../models/MathReport.js";
 
-import { MathRNG } from "../MathRNG.js";
+import { MathRNG } from "../../../core/MathRNG.js";
 import { Reel } from "../Reel.js";
 import { WinEvaluator } from "../WinEvaluator.js";
 import { createBet } from "../createBet.js";
 import { createGrid } from "../createGrid.js";
-import { fromCents } from "../money.js";
+import { fromCents } from "../../../core/money.js";
 import { ReelAnalyzer } from "./ReelAnalyzer.js";
 import { generateStopCombinations } from "./generateStopCombinations.js";
 

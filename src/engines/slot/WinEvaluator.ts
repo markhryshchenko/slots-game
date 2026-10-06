@@ -1,8 +1,8 @@
-import type { Grid } from "../models/Grid.js";
-import type { Payline } from "../models/Payline.js";
-import type { Paytable } from "../models/Paytable.js";
-import type { Win } from "../models/Win.js";
-import type { Bet } from "../models/Bet.js";
+import type { Grid } from "../../models/Grid.js";
+import type { Payline } from "../../models/Payline.js";
+import type { Paytable } from "../../models/Paytable.js";
+import type { Win } from "../../models/Win.js";
+import type { Bet } from "../../models/Bet.js";
 
 import { getPaylineSymbols } from "./getPaylineSymbols.js";
 
@@ -22,7 +22,11 @@ export class WinEvaluator {
       for (const payline of this.paylines) {
         const symbols = getPaylineSymbols(grid, payline);
         const firstSymbol = symbols[0];
-  
+
+        if (firstSymbol === undefined) {
+          throw new Error(`Payline ${payline.id} has no cells`);
+        }
+
         if (!symbols.every((symbol) => symbol === firstSymbol)) {
           continue;
         }

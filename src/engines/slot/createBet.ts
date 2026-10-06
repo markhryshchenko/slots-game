@@ -1,4 +1,4 @@
-import type { Bet } from "../models/Bet.js";
+import type { Bet } from "../../models/Bet.js";
 
 export function createBet(
   totalCents: number,

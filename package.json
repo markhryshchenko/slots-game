@@ -1,13 +1,14 @@
 {
   "name": "slots",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx src/index.ts",
-    "dev:server": "tsx watch src/server/server.ts",
+    "dev": "tsx watch src/server/server.ts",
+    "sandbox": "tsx src/sandbox.ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/server/server.js"
   },
   "keywords": [],
   "author": "",
