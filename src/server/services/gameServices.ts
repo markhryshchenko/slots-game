@@ -1,5 +1,5 @@
 import { games } from "../../games/registry.js";
-import { wallet } from "../platform.js";
+import { rounds } from "../platform.js";
 import { GameService } from "./GameService.js";
 
 const services = new Map<string, GameService>();
@@ -9,7 +9,7 @@ for (const game of games) {
     throw new Error(`Duplicate gameId in registry: ${game.gameId}`);
   }
 
-  services.set(game.gameId, new GameService(game, wallet));
+  services.set(game.gameId, new GameService(game, rounds));
 }
 
 export function getGameService(gameId: string): GameService | undefined {

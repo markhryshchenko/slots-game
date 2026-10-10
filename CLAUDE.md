@@ -33,6 +33,8 @@ src/games/            GameConfig, validateGameConfig, registry.ts (the only plac
 src/games/<gameId>/   config.ts, symbols.ts, math/<profile>.ts — data only, no logic
 src/platform/         operators, sessions,
                       wallet (Wallet port, PostgresWallet, InternalWallet in-memory for tests),
+                      wallet/ledgerOperation.ts (the one money operation used inside any transaction),
+                      rounds (RoundSettler / RoundHistory ports, PostgresRoundSettler),
                       outbox (events, OutboxRelay), realtime (RealtimePublisher port, CentrifugoPublisher), db
 src/generated/prisma/ generated Prisma client — gitignored, never edit (prisma generate)
 prisma/               schema.prisma and migrations (never edit an applied migration)
@@ -53,7 +55,8 @@ src/sandbox.ts        console sandbox, not the server
 
 - **Money:** integer minor units (cents) plus a lowercase ISO 4217 currency, Stripe-style, in the engine, the wallet and the API. No floats for money. `fromCents` is only for human-readable reports. Only 2-decimal currencies are supported so far.
 - **Bets:** only values from the game's `betLevels`. `createBet` rejects bets not divisible by the paylines count instead of rounding.
-- **Spin order:** `wallet.debit` before the spin, `wallet.credit` with the same `roundId` after a win.
+- **Spin order:** validate the bet → compute the outcome (pure) → `RoundSettler.settle` commits debit, credit (on a win), the `GameRound` record and the outbox events in ONE transaction → only then return the result. An outcome whose bet cannot be paid is discarded and never shown. Settlement is idempotent per `roundId`.
+- **Rounds are the unit of audit:** every round stores `stops`, `grid`, `wins` and `mathProfileId`, so it can be replayed from its stops. Players read only their own rounds (`GET /v1/rounds`, `/v1/rounds/:roundId`); another player's round answers 404 like a missing one.
 - **Wallet:** the balance belongs to the player, not the game. `PostgresWallet` is the source of truth: each debit/credit is one transaction — atomic `UPDATE … WHERE balance >= x`, an append-only ledger entry and an outbox event. Idempotency is enforced by `UNIQUE(type, roundId)`. Never change money outside this transaction. Amounts are `BIGINT` in Postgres and safe-integer `number` in the app.
 - **Symbols belong to the game.** The engine treats them as strings; profiles are typed `MathConfig<GameSymbol>` so typos fail to compile.
 - **Math profiles are certified artifacts.** They live as TS files in git. Never change a live profile silently; create a new profile id and verify it with `MathAnalyzer` and `MathSimulator` (skill `math-profile`).

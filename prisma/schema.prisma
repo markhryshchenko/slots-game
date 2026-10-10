@@ -40,6 +40,28 @@ model LedgerEntry {
   @@index([playerId, createdAt])
 }
 
+/// One played round: written in the same transaction as its debit and credit,
+/// so a round, its money and its notifications commit together or not at all.
+/// Stops + mathProfileId are enough to replay the outcome for an audit.
+model GameRound {
+  id                String   @id
+  playerId          String
+  operatorId        String
+  sessionId         String
+  gameId            String
+  mathProfileId     String
+  currency          String
+  betCents          BigInt
+  totalWinCents     BigInt
+  balanceAfterCents BigInt
+  stops             Json
+  grid              Json
+  wins              Json
+  createdAt         DateTime @default(now())
+
+  @@index([playerId, createdAt])
+}
+
 /// Transactional outbox: a domain event written in the same transaction as
 /// the money change and delivered by OutboxRelay, so a crash between "money
 /// changed" and "player notified" cannot lose the message. It stores the

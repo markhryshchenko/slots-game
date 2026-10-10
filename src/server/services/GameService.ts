@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { GameConfig } from "../../games/GameConfig.js";
 import type { Session } from "../../platform/sessions/Session.js";
-import type { Wallet } from "../../platform/wallet/Wallet.js";
+import type { RoundSettler } from "../../platform/rounds/RoundSettler.js";
 import { SlotMachine } from "../../engines/slot/SlotMachine.js";
 import { CryptoRNG } from "../../core/CryptoRNG.js";
 import { fromCents } from "../../core/money.js";
@@ -19,7 +19,7 @@ export class GameService {
 
   constructor(
     private readonly game: GameConfig,
-    private readonly wallet: Wallet,
+    private readonly settler: RoundSettler,
   ) {
     validateGameConfig(game);
     // Real spins need a CSPRNG: stop positions go to the client, and
@@ -46,14 +46,25 @@ export class GameService {
 
     const roundId = randomUUID();
 
-    // Debit first: the reels never spin for a bet that was not paid.
-    let balance = await this.wallet.debit(session.playerId, betCents, roundId);
-
+    // The outcome is pure computation. It is settled — debit, credit, round
+    // record, notifications — in one transaction and returned only after that
+    // commit; if the bet cannot be paid, it is discarded and never shown.
     const result = this.machine.spin(betCents);
 
-    if (result.totalWin > 0) {
-      balance = await this.wallet.credit(session.playerId, result.totalWin, roundId);
-    }
+    const balance = await this.settler.settle({
+      roundId,
+      playerId: session.playerId,
+      operatorId: session.operatorId,
+      sessionId: session.sessionId,
+      gameId: this.game.gameId,
+      mathProfileId: this.game.mathProfile.id,
+      currency: this.game.currency,
+      betCents,
+      totalWinCents: result.totalWin,
+      stops: result.stops,
+      grid: result.grid,
+      wins: result.wins,
+    });
 
     return {
       roundId,

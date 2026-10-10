@@ -115,6 +115,14 @@ if [ -n "$SERVER_PID" ] && port_listening; then
   check "GET /v1/balance equals spin balance ($SPIN_BALANCE)" \
     test -n "$BALANCE" -a "$BALANCE" = "$SPIN_BALANCE"
 
+  # The round is recorded in the same transaction as its money.
+  SPIN_WIN=$(json 'o.totalWin ?? ""' <<<"$SPIN")
+  ROUND_WIN=$(curl -s "$BASE/v1/rounds/$ROUND_ID" -H "Authorization: Bearer $TOKEN" | json 'o.totalWin ?? ""')
+  check "GET /v1/rounds/<roundId> -> recorded with the same totalWin ($SPIN_WIN)" \
+    test -n "$ROUND_WIN" -a "$ROUND_WIN" = "$SPIN_WIN"
+  check "unknown roundId -> 404" test "$(status "$BASE/v1/rounds/no-such-round" \
+    -H "Authorization: Bearer $TOKEN")" = 404
+
   check "spin without token -> 401" test "$(status -X POST "$BASE/v1/games/sevenslice/spin" \
     -H "$JSON_HEADER" -d '{"bet":100}')" = 401
   check "bet 101 -> 400" test "$(status -X POST "$BASE/v1/games/sevenslice/spin" \

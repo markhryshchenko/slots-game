@@ -1,5 +1,6 @@
 import type { Wallet } from "../platform/wallet/Wallet.js";
 import { PostgresWallet } from "../platform/wallet/PostgresWallet.js";
+import { PostgresRoundSettler } from "../platform/rounds/PostgresRoundSettler.js";
 import { SessionService } from "../platform/sessions/SessionService.js";
 import { CentrifugoPublisher } from "../platform/realtime/CentrifugoPublisher.js";
 import { OutboxRelay } from "../platform/outbox/OutboxRelay.js";
@@ -18,6 +19,10 @@ export const outboxRelay = new OutboxRelay(
 // Money changes and their outbox events commit together; the relay is woken
 // right after the commit so pushes are not delayed by its poll interval.
 export const wallet: Wallet = new PostgresWallet(prisma, () => outboxRelay.notify());
+
+// A spin settles its whole round (debit, credit, round record, events) in one
+// transaction; the same object serves the player's round history.
+export const rounds = new PostgresRoundSettler(prisma, () => outboxRelay.notify());
 
 export const sessions = new SessionService(
   config.sessionJwtSecret,
