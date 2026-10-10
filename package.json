@@ -1,44 +1,26 @@
 {
-  "name": "slots",
+  "name": "cardano-play",
   "version": "1.0.0",
-  "main": "dist/server/server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "predev": "prisma generate",
-    "dev": "tsx watch --env-file=.env src/server/server.ts",
-    "sandbox": "tsx src/sandbox.ts",
-    "watch:balance": "tsx --env-file=.env src/tools/watchBalance.ts",
-    "pretypecheck": "prisma generate",
-    "typecheck": "tsc --noEmit",
-    "prebuild": "prisma generate",
-    "build": "tsc",
-    "start": "node --env-file=.env dist/server/server.js",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^24.19.2",
-    "centrifuge": "^5.7.4",
-    "prisma": "^7.10.0",
-    "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
-  },
+  "private": true,
+  "description": "Cardano Play slot platform: game server and game clients (npm workspaces)",
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @cardano-play/server",
+    "dev:client": "npm run dev -w @cardano-play/slots-client",
+    "start": "npm run start -w @cardano-play/server",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "sandbox": "npm run sandbox -w @cardano-play/server",
+    "watch:balance": "npm run watch:balance -w @cardano-play/server",
+    "db:generate": "npm run db:generate -w @cardano-play/server",
+    "db:migrate": "npm run db:migrate -w @cardano-play/server --",
+    "db:deploy": "npm run db:deploy -w @cardano-play/server"
+  },
   "engines": {
     "node": ">=24"
-  },
-  "dependencies": {
-    "@prisma/adapter-pg": "^7.10.0",
-    "@prisma/client": "^7.10.0",
-    "express": "^5.2.1",
-    "jose": "^6.2.12",
-    "redis": "^5.12.1"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

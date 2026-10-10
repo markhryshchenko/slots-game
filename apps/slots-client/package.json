@@ -1,0 +1,21 @@
+{
+  "name": "@cardano-play/slots-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Slot game client prototype (PixiJS), first game Seven Slice. Renders server results only; never imports the server.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  },
+  "dependencies": {
+    "centrifuge": "^5.7.4",
+    "pixi.js": "^8.22.0"
+  }
+}

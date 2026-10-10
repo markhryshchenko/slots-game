@@ -1,0 +1,37 @@
+{
+  "name": "@cardano-play/server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cardano Play game server: server-authoritative spins, wallet, rounds, realtime balance",
+  "type": "module",
+  "main": "dist/server/server.js",
+  "scripts": {
+    "predev": "prisma generate",
+    "dev": "tsx watch --env-file=../../.env src/server/server.ts",
+    "sandbox": "tsx src/sandbox.ts",
+    "watch:balance": "tsx --env-file=../../.env src/tools/watchBalance.ts",
+    "pretypecheck": "prisma generate",
+    "typecheck": "tsc --noEmit",
+    "prebuild": "prisma generate",
+    "build": "tsc",
+    "start": "node --env-file=../../.env dist/server/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "express": "^5.2.1",
+    "jose": "^6.2.12",
+    "redis": "^5.12.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "centrifuge": "^5.7.4",
+    "prisma": "^7.10.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

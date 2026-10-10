@@ -7,6 +7,7 @@ import { CryptoRNG } from "../../core/CryptoRNG.js";
 import { toDisplayAmount } from "../../platform/currencies/currencies.js";
 import { getSessionLimits } from "../../platform/operators/registry.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
+import { ROW_COUNT } from "../../models/Grid.js";
 
 export class InvalidBetError extends Error {
   constructor(message: string) {
@@ -34,6 +35,25 @@ export class GameService {
 
   get paylinesCount(): number {
     return this.game.mathProfile.paylines.length;
+  }
+
+  /**
+   * Public game rules for the client and the rules screen. Reel strips are
+   * never exposed: they alone define the odds, and the outcome is the server's.
+   */
+  rules() {
+    const { id, reels, paylines, paytable } = this.game.mathProfile;
+
+    return {
+      gameId: this.game.gameId,
+      mathProfileId: id,
+      reels: reels.length,
+      rows: ROW_COUNT,
+      symbols: this.game.symbols,
+      paylines: paylines.map((line) => ({ id: line.id, rows: [...line.rows] })),
+      // A line win pays the line bet (total bet / paylines) times the multiplier.
+      paytable: paytable.map((entry) => ({ symbol: entry.symbol, payouts: { ...entry.payouts } })),
+    };
   }
 
   async spin(session: Session, bet: number) {

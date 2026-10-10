@@ -5,7 +5,7 @@ description: Create or tune a slot math profile (reel strips and paytable) for a
 
 # Math profile
 
-A math profile (`MathConfig<GameSymbol>` in `src/games/<gameId>/math/<profile>.ts`) is a **certified artifact**. Never change a live profile silently: create a new file with a new `id` and point the game config at it only after verification and the user's agreement.
+A math profile (`MathConfig<GameSymbol>` in `apps/server/src/games/<gameId>/math/<profile>.ts`) is a **certified artifact**. Never change a live profile silently: create a new file with a new `id` and point the game config at it only after verification and the user's agreement.
 
 ## Facts to rely on
 
@@ -30,7 +30,7 @@ A math profile (`MathConfig<GameSymbol>` in `src/games/<gameId>/math/<profile>.t
 5. **Verify:**
 
    ```bash
-   npx tsx .claude/skills/math-profile/analyze.ts src/games/<gameId>/math/<profile>.ts <exportName> [spins]
+   npx tsx .claude/skills/math-profile/analyze.ts apps/server/src/games/<gameId>/math/<profile>.ts <exportName> [spins]
    ```
 
    It prints the exact report (RTP, hit rate, stddev, volatility index with its band, max win, symbol probabilities) and a Monte Carlo run. The simulated RTP must stay within 3σ/√N of the exact value. A warning that repeats means a bug in the engine or the profile.

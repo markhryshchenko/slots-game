@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Slot game platform of the provider **Cardano Play**. First game: **Seven Slice** (classic fruit slot, 3×3, 5 paylines). TypeScript, Express 5, Node 24 LTS.
+Slot game platform of the provider **Cardano Play**. First game: **Seven Slice** (classic fruit slot, 3×3, 5 paylines). TypeScript, Express 5, Node 24 LTS; game clients on Vite + PixiJS v8. A monorepo on npm workspaces: `apps/server` (the API) and `apps/slots-client` (the game client).
 
 The whole design is **server-authoritative**: only the server decides a spin outcome and moves money. A client only renders results.
 
@@ -12,13 +12,16 @@ cp .env.example .env    # then fill the secrets (each >= 32 chars)
 docker compose up -d    # Postgres (127.0.0.1:5432) + Redis (127.0.0.1:6379, password) + Centrifugo (:9000, admin UI there too)
 npm run db:deploy       # apply migrations to the database
 
-npm run dev             # API on :3000 with watch (loads .env); prisma generate runs first
-npm run db:migrate      # create + apply a new migration after editing prisma/schema.prisma
+# All commands run from the repo root; they proxy to a workspace (-w). One lock file, one .env at the root.
+npm run dev             # API on :3000 with watch (loads the root .env); prisma generate runs first
+npm run dev:client      # slots client on :8080 (Vite), first game Seven Slice; proxies /v1 to the API on :3000
+npm run db:migrate      # create + apply a new migration after editing apps/server/prisma/schema.prisma
 npm run watch:balance   # end-to-end check of balance pushes over Centrifugo
 npm run sandbox         # math sandbox: demo spin, exact analyzer, Monte Carlo
-npm run typecheck       # tsc --noEmit
-npm run build           # compile src/ → dist/
-npm start               # run dist/server/server.js (loads .env)
+npm run typecheck       # tsc --noEmit in every workspace
+npm run build           # server: tsc → apps/server/dist; client: tsc + vite build → apps/slots-client/dist
+npm start               # run apps/server/dist/server/server.js (loads the root .env)
+npm install <pkg> -w @cardano-play/server   # add a dependency to one workspace
 ```
 
 Full check before "done" or a commit: the `verify` skill (`bash .claude/skills/verify/smoke.sh`).
@@ -26,6 +29,10 @@ Full check before "done" or a commit: the `verify` skill (`bash .claude/skills/v
 ## Layout and dependency rules
 
 ```text
+apps/server/          @cardano-play/server — everything below lives here (paths are relative to it)
+apps/slots-client/  @cardano-play/slots-client — Vite + PixiJS: api/ (own HTTP layer), realtime/ (BalanceFeed),
+                      money/, game/ (SlotGame, SlotScene, ReelView, SymbolView), ui/ (DOM HUD)
+
 src/core/             RNG, MathRNG, CryptoRNG, money (toMajorUnits) — shared by every future engine
 src/engines/slot/     slot mechanics: SlotMachine, Reel, createGrid, WinEvaluator, createBet
 src/engines/slot/analysis/  MathAnalyzer (exact), ReelAnalyzer
@@ -38,10 +45,10 @@ src/platform/         db (createPrisma, createRedis), operators (OperatorConfig 
                       wallet/ledgerOperation.ts (the one money operation used inside any transaction),
                       rounds (RoundSettler / RoundHistory ports, PostgresRoundSettler),
                       outbox (events, OutboxRelay), realtime (RealtimePublisher port, CentrifugoPublisher), db
-src/generated/prisma/ generated Prisma client — gitignored, never edit (prisma generate)
+src/generated/prisma/ generated Prisma client (apps/server/src/generated) — gitignored, never edit (prisma generate)
 prisma/               schema.prisma and migrations (never edit an applied migration)
 src/tools/            dev tools, e.g. watchBalance.ts
-centrifugo/config.json, docker-compose.yml   infrastructure: Postgres, Redis, Centrifugo (no secrets in git)
+centrifugo/config.json, docker-compose.yml, .env   infrastructure at the repo root: Postgres, Redis, Centrifugo (no secrets in git)
 src/server/           Express: routes → middleware → controllers → services; config.ts, platform.ts
 src/simulation/       MathSimulator (Monte Carlo)
 src/sandbox.ts        console sandbox, not the server
@@ -51,12 +58,15 @@ src/sandbox.ts        console sandbox, not the server
 - `engines/slot` never imports `games`, `platform` or `server`, and knows no concrete game or symbol.
 - `games/*` holds data; it may import engine types, never `server` or `platform`.
 - `server` composes everything; game logic does not live in controllers or routes.
-- A game client must never import the engine (it would leak reel strips and break server authority).
+- A game client must never import the server (engine, games, platform): it would leak reel strips and break server authority. Clients have their own `tsconfig` (own `src` only), write their own API layer from the HTTP contract (no shared contract package), and `verify` greps for such imports.
+- Shared code goes to `packages/*` only when a second app really needs it; the engine stays server-only.
 
 ## Domain rules
 
 - **Money:** integer minor units plus a lowercase ISO 4217 currency, Stripe-style, in the engine, the wallet and the API. No floats for money. Each currency has an `exponent` (`platform/currencies`): usd/eur 2, jpy 0, kwd 3, usdt 6. `*Cents` field and column names mean minor units of the row's currency. Human-readable copies (`balanceFloat`) go through `toDisplayAmount`; `fromCents` is only for the math reports (sandbox, analyzer, simulator). An account keeps the currency it was opened in; money is never converted.
 - **Rates** (`GET /v1/rates`) are a static, informational snapshot for clients and future reports; never use them to move money.
+- **Public game rules:** `GET /v1/games/:gameId` (no session) gives reels, rows, symbols, paylines and the paytable (multipliers of the line bet). Reel strips and weights are never sent anywhere: they alone define the odds.
+- **Client money display:** while the reels turn, the client shows the balance after the bet only; the win and final balance appear after the reels stop. Balance pushes of the client's own rounds are ignored (the spin response is authoritative); other pushes are held during a round.
 - **Bets and limits belong to the operator and the currency, not to the game:** `OperatorConfig.currencies[code]` holds `startingBalance`, `betLevels`, `defaultBet`, `maxWin` (minor units), served by `GET /v1/limits`. A spin accepts only a bet from the session's ladder; `createBet` still rejects bets not divisible by the paylines count. `validateOperatorConfig` checks every ladder against the paylines of every game at startup.
 - **Max win:** the payout of a round is capped at `maxWin`; the round stores `maxWinReached`, and its `wins` stay uncapped, so a replay explains the difference.
 - **Spin order:** validate the bet → compute the outcome (pure) → `RoundSettler.settle` commits debit, credit (on a win), the `GameRound` record and the outbox events in ONE transaction → only then return the result. An outcome whose bet cannot be paid is discarded and never shown. Settlement is idempotent per `roundId`.
@@ -83,9 +93,9 @@ src/sandbox.ts        console sandbox, not the server
 
 ## Working rules
 
-- Never commit `.env` or secrets. `slot_engine_handbook.md`, `slot_engine_learning_context.md` and `CLAUDE.local.md` are local-only and gitignored.
+- Never commit `.env` or secrets. `slot_engine_handbook.md`, `slot_engine_learning_context.md`, `CLAUDE.local.md` and `RUN.md` (local run instructions) are local-only and gitignored.
 - Stop servers by PID (including the `tsx watch` parent), never with `taskkill /IM node.exe`.
-- **Ports:** host ports 8000–8999 are reserved for frontend dev servers — never publish backend services there. In use: API 3000, smoke-test server 3999, Postgres 5432 and Redis 6379 (both 127.0.0.1 only), Centrifugo 9000. Manual multi-instance checks use 3997–3998.
+- **Ports:** host ports 8000–8999 are reserved for frontend dev servers — never publish backend services there. In use: slots client 8080 (Vite), API 3000, smoke-test server 3999, Postgres 5432 and Redis 6379 (both 127.0.0.1 only), Centrifugo 9000. Manual multi-instance checks use 3997–3998.
 - Do not upgrade dependencies or run `npm audit fix` without asking.
 - Destructive database commands (`prisma migrate reset`, dropping tables or volumes) need the user's explicit consent, even on the dev database.
 - Commit messages in English: a short title plus bullet points.

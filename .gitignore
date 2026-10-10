@@ -4,5 +4,6 @@ node_modules
 slot_engine_handbook.md
 slot_engine_learning_context.md
 CLAUDE.local.md
+RUN.md
 dist
-src/generated/
+apps/server/src/generated/

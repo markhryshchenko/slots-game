@@ -2,11 +2,11 @@
 // Usage: npx tsx .claude/skills/math-profile/analyze.ts <profile-module.ts> <exportName> [spins]
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { MathConfig } from "../../../src/engines/slot/MathConfig.js";
-import { MathAnalyzer } from "../../../src/engines/slot/analysis/MathAnalyzer.js";
-import { SlotMachine } from "../../../src/engines/slot/SlotMachine.js";
-import { MathRNG } from "../../../src/core/MathRNG.js";
-import { MathSimulator } from "../../../src/simulation/MathSimulator.js";
+import type { MathConfig } from "../../../apps/server/src/engines/slot/MathConfig.js";
+import { MathAnalyzer } from "../../../apps/server/src/engines/slot/analysis/MathAnalyzer.js";
+import { SlotMachine } from "../../../apps/server/src/engines/slot/SlotMachine.js";
+import { MathRNG } from "../../../apps/server/src/core/MathRNG.js";
+import { MathSimulator } from "../../../apps/server/src/simulation/MathSimulator.js";
 
 const [modulePath, exportName, spinsArg] = process.argv.slice(2);
 

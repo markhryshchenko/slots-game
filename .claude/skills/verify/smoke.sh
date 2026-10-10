@@ -80,14 +80,18 @@ for expected in \
 done
 
 echo "== 4. Build"
-check "npm run build" npm run --silent build
+# Builds every workspace: the server (tsc) and the game client (tsc + vite build).
+check "npm run build (server and client)" npm run --silent build
+# Server authority: a client must never import server code (engine, reel strips).
+check "client imports nothing from the server" \
+  sh -c '! grep -rEn "from \"[^\"]*(apps/server|\.\./server|@cardano-play/server)" apps/*-client/src'
 
 echo "== 5. Server on port $PORT"
 if port_listening; then
   fail "port $PORT is already in use (set SMOKE_PORT to another port)"
 else
   # A variable already set in the environment wins over --env-file.
-  PORT="$PORT" node --env-file=.env dist/server/server.js >"$SERVER_LOG" 2>&1 &
+  PORT="$PORT" node --env-file=.env apps/server/dist/server/server.js >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
 
   for _ in $(seq 1 20); do
@@ -132,6 +136,12 @@ if [ -n "$SERVER_PID" ] && port_listening; then
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":101}')" = 400
   check "unknown game -> 404" test "$(status -X POST "$BASE/v1/games/unknown/spin" \
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')" = 404
+
+  # Public rules for the client: paylines and paytable, never the reel strips.
+  RULES=$(curl -s "$BASE/v1/games/sevenslice")
+  check "GET /v1/games/sevenslice -> public rules (5 paylines, 3x3)" \
+    test "$(json 'o.paylines.length === 5 && o.reels === 3 && o.rows === 3' <<<"$RULES")" = true
+  check "game rules never expose reel strips" sh -c '! printf %s "$1" | grep -q strip' _ "$RULES"
 
   # Currencies, rates and limits: the bet ladder belongs to the operator and
   # the currency, and balanceFloat follows the currency's exponent.

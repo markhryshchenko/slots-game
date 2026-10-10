@@ -3,7 +3,7 @@
     "type": "redis"
   },
   "client": {
-    "allowed_origins": ["http://localhost:3000"]
+    "allowed_origins": ["http://localhost:3000", "http://localhost:8080"]
   },
   "channel": {
     "namespaces": [

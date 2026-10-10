@@ -2,7 +2,8 @@
 // so no dotenv dependency is needed.
 import { defineConfig, env } from "prisma/config";
 
-process.loadEnvFile(".env");
+// The env file lives at the repository root, next to docker-compose.yml.
+process.loadEnvFile("../../.env");
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
