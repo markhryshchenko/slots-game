@@ -29,12 +29,15 @@ if (sessionJwtSecret === centrifugoTokenSecret) {
 
 export const config = {
   port: Number(process.env.PORT ?? 3000),
+  databaseUrl: required("DATABASE_URL"),
+  // Secure default: off unless set to exactly "true". Never enable in production.
+  demoOperatorEnabled: process.env.DEMO_OPERATOR_ENABLED === "true",
   sessionJwtSecret,
   sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 3600),
   centrifugo: {
-    apiUrl: process.env.CENTRIFUGO_API_URL ?? "http://localhost:8000/api",
+    apiUrl: process.env.CENTRIFUGO_API_URL ?? "http://localhost:9000/api",
     apiKey: secret("CENTRIFUGO_API_KEY"),
     tokenSecret: centrifugoTokenSecret,
-    wsUrl: process.env.CENTRIFUGO_WS_URL ?? "ws://localhost:8000/connection/websocket",
+    wsUrl: process.env.CENTRIFUGO_WS_URL ?? "ws://localhost:9000/connection/websocket",
   },
 };

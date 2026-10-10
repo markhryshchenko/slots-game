@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { fromCents } from "../../core/money.js";
 import { findOperator, resolvePlayer } from "../../platform/operators/registry.js";
 import { balanceChannel } from "../../platform/realtime/RealtimePublisher.js";
 import { signRealtimeToken } from "../../platform/realtime/realtimeToken.js";
@@ -22,7 +23,7 @@ export async function profileController(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const operator = findOperator(cid);
+  const operator = findOperator(cid, { allowDemo: config.demoOperatorEnabled });
 
   if (!operator) {
     res.status(404).json({ error: `Unknown operator: ${cid}` });
@@ -63,6 +64,8 @@ export async function profileController(req: Request, res: Response): Promise<vo
     operatorId: operator.operatorId,
     gameId,
     balance: balance.balanceCents,
+    // Human-readable copy for debugging only; clients compute with `balance` (cents).
+    balanceFloat: fromCents(balance.balanceCents),
     currency: balance.currency,
     sessionToken,
     // Turbo-style: the client connects to Centrifugo and subscribes to its

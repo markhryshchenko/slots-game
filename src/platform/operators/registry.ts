@@ -6,11 +6,18 @@ export const operators: readonly OperatorConfig[] = [
     operatorId: "democustomer",
     currency: "usd",
     startingBalanceCents: 100_000, // $1,000.00
+    demo: true,
   },
 ];
 
-export function findOperator(operatorId: string): OperatorConfig | undefined {
-  return operators.find((operator) => operator.operatorId === operatorId);
+/** A disabled demo operator is reported as unknown, so its existence is not revealed. */
+export function findOperator(
+  operatorId: string,
+  options: { allowDemo: boolean },
+): OperatorConfig | undefined {
+  return operators.find(
+    (operator) => operator.operatorId === operatorId && (options.allowDemo || !operator.demo),
+  );
 }
 
 export interface OperatorPlayer {

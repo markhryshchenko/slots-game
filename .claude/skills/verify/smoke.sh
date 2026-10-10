@@ -10,7 +10,7 @@ PORT="${SMOKE_PORT:-3999}"
 BASE="http://localhost:$PORT"
 JSON_HEADER="Content-Type: application/json"
 SERVER_LOG="${TMPDIR:-${TEMP:-/tmp}}/smoke-server.log"
-CENTRIFUGO_HEALTH_URL="${CENTRIFUGO_HEALTH_URL:-http://localhost:8000/health}"
+CENTRIFUGO_HEALTH_URL="${CENTRIFUGO_HEALTH_URL:-http://localhost:9000/health}"
 FAILED=0
 SERVER_PID=""
 
@@ -51,8 +51,14 @@ NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0
 check "Node >= 24 (found $(node -v 2>/dev/null || echo none))" test "$NODE_MAJOR" -ge 24
 check ".env has SESSION_JWT_SECRET (>= 32 chars)" grep -qE '^SESSION_JWT_SECRET=.{32,}' .env
 check ".env has Centrifugo secrets" grep -qE '^CENTRIFUGO_TOKEN_SECRET=.{32,}' .env
+check ".env has DATABASE_URL" grep -qE '^DATABASE_URL=postgres' .env
+# The HTTP flow logs in through the demo operator, which is off unless enabled.
+check ".env has DEMO_OPERATOR_ENABLED=true (local only)" grep -qE '^DEMO_OPERATOR_ENABLED=true' .env
+# The wallet lives in Postgres: without it the server cannot start.
+check "Postgres is up (docker compose)" \
+  sh -c 'docker compose exec -T postgres pg_isready -U slots -d slots >/dev/null 2>&1'
 if [ "$FAILED" -ne 0 ]; then
-  echo "Environment is not ready: run 'nvm use' and create .env from .env.example."
+  echo "Environment is not ready: run 'nvm use', create .env from .env.example, 'docker compose up -d', 'npm run db:deploy'."
   exit 1
 fi
 
@@ -93,8 +99,9 @@ if [ -n "$SERVER_PID" ] && port_listening; then
   echo "== 6. HTTP flow"
   check "GET /health -> 200" test "$(status "$BASE/health")" = 200
 
+  # Balances persist in Postgres, so every run uses a fresh player.
   PROFILE=$(curl -s -X POST "$BASE/v1/profile" -H "$JSON_HEADER" \
-    -d '{"token":"smoke-test","cid":"democustomer","gameId":"sevenslice"}')
+    -d "{\"token\":\"smoke-$(date +%s)-$RANDOM\",\"cid\":\"democustomer\",\"gameId\":\"sevenslice\"}")
   TOKEN=$(json 'o.sessionToken ?? ""' <<<"$PROFILE")
   check "POST /v1/profile -> sessionToken" test -n "$TOKEN"
 
@@ -114,6 +121,13 @@ if [ -n "$SERVER_PID" ] && port_listening; then
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":101}')" = 400
   check "unknown game -> 404" test "$(status -X POST "$BASE/v1/games/unknown/spin" \
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')" = 404
+
+  # Security: errors are JSON and never leak a stack trace or file paths.
+  BROKEN=$(curl -s -w ' %{http_code}' -X POST "$BASE/v1/profile" -H "$JSON_HEADER" -d '{"token": broken')
+  check "malformed JSON -> 400 JSON, no stack trace" \
+    sh -c 'case "$1" in *"Malformed JSON body"*400) ! printf %s "$1" | grep -qE "node_modules|at JSON|<pre>";; *) false;; esac' _ "$BROKEN"
+  check "unknown route -> 404 JSON" \
+    test "$(curl -s -w ' %{http_code}' "$BASE/no-such-route")" = '{"error":"Not found"} 404'
 
   echo "== 7. Realtime balance over Centrifugo"
   if curl -s -o /dev/null -m 2 "$CENTRIFUGO_HEALTH_URL"; then

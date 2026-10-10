@@ -1,0 +1,59 @@
+// Money tables. Amounts are integer minor units (cents) stored as BIGINT.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model WalletAccount {
+  playerId     String   @id
+  currency     String
+  balanceCents BigInt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum LedgerType {
+  debit
+  credit
+}
+
+/// Append-only. The unique (type, roundId) pair makes debit/credit
+/// idempotent at the database level: a retried operation cannot be
+/// written twice, even by two server instances at once.
+model LedgerEntry {
+  id                String     @id @default(uuid())
+  playerId          String
+  type              LedgerType
+  amountCents       BigInt
+  roundId           String
+  balanceAfterCents BigInt
+  createdAt         DateTime   @default(now())
+
+  @@unique([type, roundId])
+  @@index([playerId, createdAt])
+}
+
+/// Transactional outbox: a domain event written in the same transaction as
+/// the money change and delivered by OutboxRelay, so a crash between "money
+/// changed" and "player notified" cannot lose the message. It stores the
+/// event, not a Centrifugo channel: the wallet knows nothing about transport.
+model OutboxMessage {
+  id          BigInt    @id @default(autoincrement())
+  type        String
+  payload     Json
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+  /// Set when delivery gave up after too many attempts (dead letter).
+  failedAt    DateTime?
+
+  @@index([publishedAt, failedAt, id])
+}

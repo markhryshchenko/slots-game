@@ -3,7 +3,8 @@ import type { GameConfig } from "../../games/GameConfig.js";
 import type { Session } from "../../platform/sessions/Session.js";
 import type { Wallet } from "../../platform/wallet/Wallet.js";
 import { SlotMachine } from "../../engines/slot/SlotMachine.js";
-import { MathRNG } from "../../core/MathRNG.js";
+import { CryptoRNG } from "../../core/CryptoRNG.js";
+import { fromCents } from "../../core/money.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
 
 export class InvalidBetError extends Error {
@@ -21,7 +22,9 @@ export class GameService {
     private readonly wallet: Wallet,
   ) {
     validateGameConfig(game);
-    this.machine = new SlotMachine(game.mathProfile, new MathRNG());
+    // Real spins need a CSPRNG: stop positions go to the client, and
+    // Math.random's state could be reconstructed from them.
+    this.machine = new SlotMachine(game.mathProfile, new CryptoRNG());
   }
 
   get gameId(): string {
@@ -58,6 +61,8 @@ export class GameService {
       bet: betCents,
       totalWin: result.totalWin,
       balance: balance.balanceCents,
+      // Human-readable copy for debugging only; clients compute with `balance` (cents).
+      balanceFloat: fromCents(balance.balanceCents),
       stops: result.stops,
       grid: result.grid,
       wins: result.wins,

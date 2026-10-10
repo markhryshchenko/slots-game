@@ -26,6 +26,7 @@ interface SpinResponse {
 
 interface BalanceUpdate {
   balance: number;
+  balanceFloat: number;
   roundId: string;
   reason: "debit" | "credit";
 }
@@ -117,7 +118,9 @@ const aliceSubscription = aliceClient.newSubscription(alice.realtime.channel);
 aliceSubscription.on("publication", (ctx) => {
   const update = ctx.data as BalanceUpdate;
   received.push(update);
-  console.log(`  ws  ${update.reason.padEnd(6)} balance=${update.balance} round=${update.roundId.slice(0, 8)}`);
+  console.log(
+    `  ws  ${update.reason.padEnd(6)} balance=${update.balance} (${update.balanceFloat}) round=${update.roundId.slice(0, 8)}`,
+  );
 });
 
 await subscribe(aliceSubscription);
@@ -155,6 +158,10 @@ report(
 report(
   received.at(-1)?.balance === lastSpin?.balance,
   `last pushed balance equals the last spin balance (${lastSpin?.balance})`,
+);
+report(
+  received.length > 0 && received.every((update) => update.balanceFloat === update.balance / 100),
+  "every push carries balanceFloat = balance / 100",
 );
 
 // Recovery (cache mode, history in Redis): after a dropped connection the

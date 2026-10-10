@@ -5,4 +5,9 @@ export interface OperatorConfig {
   currency: string;
   /** Demo balance a new player starts with, in cents. */
   startingBalanceCents: number;
+  /**
+   * Demo operator: accepts any launch token and hands out free balance, so it
+   * exists only when explicitly enabled (DEMO_OPERATOR_ENABLED=true).
+   */
+  demo: boolean;
 }

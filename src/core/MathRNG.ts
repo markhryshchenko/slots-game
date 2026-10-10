@@ -1,5 +1,6 @@
 import type { RNG } from "./RNG.js";
 
+/** Math.random-based RNG — predictable, for the sandbox and learning only. Real spins use CryptoRNG. */
 export class MathRNG implements RNG {
   next(): number {
     return Math.random();

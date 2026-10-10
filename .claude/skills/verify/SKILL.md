@@ -17,12 +17,12 @@ Every check prints `PASS` or `FAIL`. The script exits with 1 if anything failed,
 
 | # | Check | What a failure usually means |
 |---|---|---|
-| 1 | Node >= 24, `.env` has `SESSION_JWT_SECRET` (>= 32 chars) | Run `nvm use`; create `.env` from `.env.example` |
+| 1 | Node >= 24; `.env` has the session and Centrifugo secrets and `DATABASE_URL`; Postgres answers `pg_isready` | Run `nvm use`; create `.env` from `.env.example`; `docker compose up -d`; `npm run db:deploy` |
 | 2 | `npm run typecheck` | A type error; the compiler output is printed above the FAIL line |
 | 3 | Sandbox reference numbers from the exact `MathAnalyzer` | Math changed: strips, paytable, paylines, win evaluation or the money path |
 | 4 | `npm run build` | Compile error in `src/` |
 | 5 | Built server starts on port 3999 | Startup error (config, game registry, invalid game config); the log path is printed |
-| 6 | HTTP flow: `/health`, `POST /v1/profile`, spin 100 → `roundId`, `/v1/balance` equals the spin balance, 401 without token, 400 for bet 101, 404 for an unknown game | API contract or wallet/session regression |
+| 6 | HTTP flow with a fresh player per run (balances persist in Postgres): `/health`, `POST /v1/profile`, spin 100 → `roundId`, `/v1/balance` equals the spin balance, 401 without token, 400 for bet 101, 404 for an unknown game; security: malformed JSON → 400 JSON without a stack trace, unknown route → 404 JSON | API contract, wallet/session or error-handler regression. Needs `DEMO_OPERATOR_ENABLED=true` in the local `.env` |
 | 7 | Realtime: `npm run watch:balance` — subscribe over Centrifugo, 3 spins, every debit/credit pushed in order, last push = last spin balance, a reconnect recovers the missed balance from Redis history, another player's subscription denied | Push path broken (`PublishingWallet`, Centrifugo or Redis config, token secret). **SKIP** (not FAIL) when Centrifugo is not running — start it with `docker compose up -d` |
 
 The server runs on port **3999** (override with `SMOKE_PORT`), so it does not clash with a `npm run dev` on 3000. It is always stopped on exit, including after a failure.
