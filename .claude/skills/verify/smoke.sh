@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Full project check: environment, types, exact math reference numbers,
+# build, and an HTTP flow against a temporary server.
+# Usage (from anywhere): bash .claude/skills/verify/smoke.sh
+set -uo pipefail
+
+cd "$(dirname "$0")/../../.." || exit 1
+
+PORT="${SMOKE_PORT:-3999}"
+BASE="http://localhost:$PORT"
+JSON_HEADER="Content-Type: application/json"
+SERVER_LOG="${TMPDIR:-${TEMP:-/tmp}}/smoke-server.log"
+FAILED=0
+SERVER_PID=""
+
+pass() { printf 'PASS  %s\n' "$1"; }
+fail() { printf 'FAIL  %s\n' "$1"; FAILED=1; }
+check() {
+  local name="$1"
+  shift
+  if "$@"; then pass "$name"; else fail "$name"; fi
+}
+
+# Reads JSON from stdin and prints the given JS expression over it (`o`).
+json() {
+  node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);console.log($1)}catch{console.log('')}})"
+}
+status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+
+port_listening() { curl -s -o /dev/null -m 1 "$BASE/health"; }
+
+stop_server() {
+  if [ -n "$SERVER_PID" ]; then
+    kill "$SERVER_PID" 2>/dev/null
+    wait "$SERVER_PID" 2>/dev/null
+    SERVER_PID=""
+  fi
+
+  # Fallback for Windows: kill whatever still listens on the smoke port.
+  if port_listening && command -v netstat >/dev/null; then
+    local pid
+    pid=$(netstat -ano 2>/dev/null | grep ":$PORT " | grep LISTENING | awk '{print $5}' | head -1)
+    [ -n "$pid" ] && taskkill //PID "$pid" //F >/dev/null 2>&1
+  fi
+}
+trap stop_server EXIT
+
+echo "== 1. Environment"
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
+check "Node >= 24 (found $(node -v 2>/dev/null || echo none))" test "$NODE_MAJOR" -ge 24
+check ".env has SESSION_JWT_SECRET (>= 32 chars)" grep -qE '^SESSION_JWT_SECRET=.{32,}' .env
+if [ "$FAILED" -ne 0 ]; then
+  echo "Environment is not ready: run 'nvm use' and create .env from .env.example."
+  exit 1
+fi
+
+echo "== 2. Types"
+check "npm run typecheck" npm run --silent typecheck
+
+echo "== 3. Math reference numbers (exact analyzer, deterministic)"
+SANDBOX_OUTPUT=$(npm run --silent sandbox 2>&1)
+for expected in \
+  "Theoretical RTP: 0.96" \
+  "Hit rate: 0.297" \
+  "3.428829666383483" \
+  "1.6772580136772175" \
+  "13.000020032035849"; do
+  check "sandbox contains '$expected'" grep -qF "$expected" <<<"$SANDBOX_OUTPUT"
+done
+
+echo "== 4. Build"
+check "npm run build" npm run --silent build
+
+echo "== 5. Server on port $PORT"
+if port_listening; then
+  fail "port $PORT is already in use (set SMOKE_PORT to another port)"
+else
+  # A variable already set in the environment wins over --env-file.
+  PORT="$PORT" node --env-file=.env dist/server/server.js >"$SERVER_LOG" 2>&1 &
+  SERVER_PID=$!
+
+  for _ in $(seq 1 20); do
+    port_listening && break
+    sleep 0.5
+  done
+
+  check "server answers /health (log: $SERVER_LOG)" port_listening
+fi
+
+if [ -n "$SERVER_PID" ] && port_listening; then
+  echo "== 6. HTTP flow"
+  check "GET /health -> 200" test "$(status "$BASE/health")" = 200
+
+  PROFILE=$(curl -s -X POST "$BASE/v1/profile" -H "$JSON_HEADER" \
+    -d '{"token":"smoke-test","cid":"democustomer","gameId":"sevenslice"}')
+  TOKEN=$(json 'o.sessionToken ?? ""' <<<"$PROFILE")
+  check "POST /v1/profile -> sessionToken" test -n "$TOKEN"
+
+  SPIN=$(curl -s -X POST "$BASE/v1/games/sevenslice/spin" -H "$JSON_HEADER" \
+    -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')
+  ROUND_ID=$(json 'o.roundId ?? ""' <<<"$SPIN")
+  SPIN_BALANCE=$(json 'o.balance ?? ""' <<<"$SPIN")
+  check "spin 100 -> roundId" test -n "$ROUND_ID"
+
+  BALANCE=$(curl -s "$BASE/v1/balance" -H "Authorization: Bearer $TOKEN" | json 'o.balance ?? ""')
+  check "GET /v1/balance equals spin balance ($SPIN_BALANCE)" \
+    test -n "$BALANCE" -a "$BALANCE" = "$SPIN_BALANCE"
+
+  check "spin without token -> 401" test "$(status -X POST "$BASE/v1/games/sevenslice/spin" \
+    -H "$JSON_HEADER" -d '{"bet":100}')" = 401
+  check "bet 101 -> 400" test "$(status -X POST "$BASE/v1/games/sevenslice/spin" \
+    -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":101}')" = 400
+  check "unknown game -> 404" test "$(status -X POST "$BASE/v1/games/unknown/spin" \
+    -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')" = 404
+fi
+
+echo
+if [ "$FAILED" -ne 0 ]; then
+  echo "SMOKE TEST FAILED"
+  exit 1
+fi
+
+echo "ALL CHECKS PASSED"

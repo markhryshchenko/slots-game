@@ -1,5 +1,7 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
+  // Only src/ is the app; helper scripts elsewhere (e.g. .claude/skills) run via tsx.
+  "include": ["src"],
   "compilerOptions": {
     // File Layout
     "rootDir": "./src",
