@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
+import { InsufficientFundsError } from "../../platform/wallet/errors.js";
+import { InvalidBetError } from "../services/GameService.js";
 
-export function spinController(req: Request, res: Response): void {
+export async function spinController(req: Request, res: Response): Promise<void> {
   const bet: unknown = req.body?.bet;
 
   if (typeof bet !== "number" || !Number.isInteger(bet) || bet <= 0) {
@@ -11,8 +13,13 @@ export function spinController(req: Request, res: Response): void {
   }
 
   try {
-    res.json(res.locals.gameService.spin(bet));
+    res.json(await res.locals.gameService.spin(res.locals.session, bet));
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    if (error instanceof InvalidBetError || error instanceof InsufficientFundsError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    throw error; // unexpected: Express 5 turns it into a 500
   }
 }

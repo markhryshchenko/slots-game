@@ -1,45 +1,66 @@
+import { randomUUID } from "node:crypto";
 import type { GameConfig } from "../../games/GameConfig.js";
+import type { Session } from "../../platform/sessions/Session.js";
+import type { Wallet } from "../../platform/wallet/Wallet.js";
 import { SlotMachine } from "../../engines/slot/SlotMachine.js";
 import { MathRNG } from "../../core/MathRNG.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
 
+export class InvalidBetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidBetError";
+  }
+}
+
 export class GameService {
   private readonly machine: SlotMachine;
-  private balanceCents = 100_000; // demo starting balance: $1,000.00
 
-  constructor(private readonly game: GameConfig) {
+  constructor(
+    private readonly game: GameConfig,
+    private readonly wallet: Wallet,
+  ) {
     validateGameConfig(game);
     this.machine = new SlotMachine(game.mathProfile, new MathRNG());
   }
 
-  spin(betCents: number) {
+  get gameId(): string {
+    return this.game.gameId;
+  }
+
+  get currency(): string {
+    return this.game.currency;
+  }
+
+  async spin(session: Session, betCents: number) {
     if (!this.game.betLevels.includes(betCents)) {
-      throw new Error("Bet is not one of the allowed bet levels");
+      throw new InvalidBetError("Bet is not one of the allowed bet levels");
     }
 
-    if (betCents > this.balanceCents) {
-      throw new Error("Insufficient balance");
+    if (session.currency !== this.game.currency) {
+      throw new InvalidBetError("Session currency does not match the game currency");
     }
+
+    const roundId = randomUUID();
+
+    // Debit first: the reels never spin for a bet that was not paid.
+    let balance = await this.wallet.debit(session.playerId, betCents, roundId);
 
     const result = this.machine.spin(betCents);
 
-    this.balanceCents = this.balanceCents - betCents + result.totalWin;
+    if (result.totalWin > 0) {
+      balance = await this.wallet.credit(session.playerId, result.totalWin, roundId);
+    }
 
     return {
-      currency: this.game.currency,
+      roundId,
+      currency: balance.currency,
       bet: betCents,
       totalWin: result.totalWin,
-      balance: this.balanceCents,
+      balance: balance.balanceCents,
       stops: result.stops,
       grid: result.grid,
       wins: result.wins,
-    };
-  }
-
-  getBalance() {
-    return {
-      balance: this.balanceCents,
-      currency: this.game.currency,
     };
   }
 }
