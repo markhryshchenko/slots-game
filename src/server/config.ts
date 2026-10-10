@@ -19,8 +19,22 @@ function secret(name: string): string {
   return value;
 }
 
+const sessionJwtSecret = secret("SESSION_JWT_SECRET");
+const centrifugoTokenSecret = secret("CENTRIFUGO_TOKEN_SECRET");
+
+// Separate secrets: a leaked Centrifugo secret must not allow forging API sessions.
+if (sessionJwtSecret === centrifugoTokenSecret) {
+  throw new Error("CENTRIFUGO_TOKEN_SECRET must differ from SESSION_JWT_SECRET");
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 3000),
-  sessionJwtSecret: secret("SESSION_JWT_SECRET"),
+  sessionJwtSecret,
   sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 3600),
+  centrifugo: {
+    apiUrl: process.env.CENTRIFUGO_API_URL ?? "http://localhost:8000/api",
+    apiKey: secret("CENTRIFUGO_API_KEY"),
+    tokenSecret: centrifugoTokenSecret,
+    wsUrl: process.env.CENTRIFUGO_WS_URL ?? "ws://localhost:8000/connection/websocket",
+  },
 };

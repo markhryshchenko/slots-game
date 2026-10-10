@@ -1,0 +1,35 @@
+# Local infrastructure. Secrets are interpolated from .env by name, so a
+# container never sees unrelated secrets such as SESSION_JWT_SECRET.
+services:
+  # Broker and channel history for Centrifugo. Not published to the host:
+  # only containers on the compose network reach it (debug: docker compose exec redis redis-cli).
+  redis:
+    image: redis:8.10.2
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6.9.7
+    command: centrifugo --config=/centrifugo/config.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./centrifugo/config.json:/centrifugo/config.json:ro
+    environment:
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_TOKEN_SECRET:?set CENTRIFUGO_TOKEN_SECRET in .env}
+      CENTRIFUGO_HTTP_API_KEY: ${CENTRIFUGO_API_KEY:?set CENTRIFUGO_API_KEY in .env}
+      CENTRIFUGO_ADMIN_PASSWORD: ${CENTRIFUGO_ADMIN_PASSWORD:?set CENTRIFUGO_ADMIN_PASSWORD in .env}
+      CENTRIFUGO_ADMIN_SECRET: ${CENTRIFUGO_ADMIN_SECRET:?set CENTRIFUGO_ADMIN_SECRET in .env}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped

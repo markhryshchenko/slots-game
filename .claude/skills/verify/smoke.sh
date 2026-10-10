@@ -10,6 +10,7 @@ PORT="${SMOKE_PORT:-3999}"
 BASE="http://localhost:$PORT"
 JSON_HEADER="Content-Type: application/json"
 SERVER_LOG="${TMPDIR:-${TEMP:-/tmp}}/smoke-server.log"
+CENTRIFUGO_HEALTH_URL="${CENTRIFUGO_HEALTH_URL:-http://localhost:8000/health}"
 FAILED=0
 SERVER_PID=""
 
@@ -49,6 +50,7 @@ echo "== 1. Environment"
 NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
 check "Node >= 24 (found $(node -v 2>/dev/null || echo none))" test "$NODE_MAJOR" -ge 24
 check ".env has SESSION_JWT_SECRET (>= 32 chars)" grep -qE '^SESSION_JWT_SECRET=.{32,}' .env
+check ".env has Centrifugo secrets" grep -qE '^CENTRIFUGO_TOKEN_SECRET=.{32,}' .env
 if [ "$FAILED" -ne 0 ]; then
   echo "Environment is not ready: run 'nvm use' and create .env from .env.example."
   exit 1
@@ -112,6 +114,14 @@ if [ -n "$SERVER_PID" ] && port_listening; then
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":101}')" = 400
   check "unknown game -> 404" test "$(status -X POST "$BASE/v1/games/unknown/spin" \
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')" = 404
+
+  echo "== 7. Realtime balance over Centrifugo"
+  if curl -s -o /dev/null -m 2 "$CENTRIFUGO_HEALTH_URL"; then
+    check "npm run watch:balance (ordered pushes, foreign channel denied)" \
+      env API_URL="$BASE" npm run --silent watch:balance
+  else
+    printf 'SKIP  Centrifugo is not running (docker compose up -d)\n'
+  fi
 fi
 
 echo

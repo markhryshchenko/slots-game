@@ -1,0 +1,26 @@
+{
+  "engine": {
+    "type": "redis",
+    "redis": {
+      "address": "redis://redis:6379"
+    }
+  },
+  "client": {
+    "allowed_origins": ["http://localhost:3000"]
+  },
+  "channel": {
+    "without_namespace": {
+      "allow_user_limited_channels": true,
+      "history_size": 1,
+      "history_ttl": "1h",
+      "force_recovery": true,
+      "force_recovery_mode": "cache"
+    }
+  },
+  "admin": {
+    "enabled": true
+  },
+  "health": {
+    "enabled": true
+  }
+}

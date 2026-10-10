@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
 import { findOperator, resolvePlayer } from "../../platform/operators/registry.js";
+import { balanceChannel } from "../../platform/realtime/RealtimePublisher.js";
+import { signRealtimeToken } from "../../platform/realtime/realtimeToken.js";
+import { config } from "../config.js";
 import { sessions, wallet } from "../platform.js";
 import { getGameService } from "../services/gameServices.js";
 
@@ -46,7 +49,7 @@ export async function profileController(req: Request, res: Response): Promise<vo
     operator.startingBalanceCents,
   );
 
-  const { token: sessionToken } = await sessions.create({
+  const { session, token: sessionToken } = await sessions.create({
     playerId: player.playerId,
     operatorId: operator.operatorId,
     gameId,
@@ -62,5 +65,16 @@ export async function profileController(req: Request, res: Response): Promise<vo
     balance: balance.balanceCents,
     currency: balance.currency,
     sessionToken,
+    // Turbo-style: the client connects to Centrifugo and subscribes to its
+    // own balance channel; balance changes then arrive over WebSocket.
+    realtime: {
+      url: config.centrifugo.wsUrl,
+      token: await signRealtimeToken(
+        player.playerId,
+        session.expiresAt,
+        config.centrifugo.tokenSecret,
+      ),
+      channel: balanceChannel(player.playerId),
+    },
   });
 }

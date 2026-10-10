@@ -8,9 +8,11 @@ The whole design is **server-authoritative**: only the server decides a spin out
 
 ```bash
 nvm use                 # Node version from .nvmrc (24.x); engines: node >= 24
-cp .env.example .env    # then set SESSION_JWT_SECRET (>= 32 chars)
+cp .env.example .env    # then fill the secrets (each >= 32 chars)
+docker compose up -d              # Redis + Centrifugo (real-time on :8000, admin UI there too)
 
 npm run dev             # API on :3000 with watch (loads .env)
+npm run watch:balance   # end-to-end check of balance pushes over Centrifugo
 npm run sandbox         # math sandbox: demo spin, exact analyzer, Monte Carlo
 npm run typecheck       # tsc --noEmit
 npm run build           # compile src/ → dist/
@@ -27,7 +29,10 @@ src/engines/slot/     slot mechanics: SlotMachine, Reel, createGrid, WinEvaluato
 src/engines/slot/analysis/  MathAnalyzer (exact), ReelAnalyzer
 src/games/            GameConfig, validateGameConfig, registry.ts (the only place a game is registered)
 src/games/<gameId>/   config.ts, symbols.ts, math/<profile>.ts — data only, no logic
-src/platform/         operators, wallet (Wallet port + InternalWallet), sessions
+src/platform/         operators, wallet (Wallet port + InternalWallet), sessions,
+                      realtime (RealtimePublisher port, CentrifugoPublisher, PublishingWallet)
+src/tools/            dev tools, e.g. watchBalance.ts
+centrifugo/config.json, docker-compose.yml   real-time infrastructure: Centrifugo on a Redis engine (no secrets in git)
 src/server/           Express: routes → middleware → controllers → services; config.ts, platform.ts
 src/simulation/       MathSimulator (Monte Carlo)
 src/sandbox.ts        console sandbox, not the server
@@ -49,6 +54,9 @@ src/sandbox.ts        console sandbox, not the server
 - **Math profiles are certified artifacts.** They live as TS files in git. Never change a live profile silently; create a new profile id and verify it with `MathAnalyzer` and `MathSimulator` (skill `math-profile`).
 - **RNG:** behind the `RNG` interface; `Math.random` (`MathRNG`) is for learning only.
 - **Sessions:** JWT (HS256, `jose`) with `sub = <operatorId>@<playerId>`, `sid` and `exp`, backed by a server-side session. Secrets come from env, never from code.
+- **Real-time balance:** Centrifugo only delivers; the wallet is the source of truth. `PublishingWallet` pushes `{balance, currency, roundId, reason}` to the user-limited channel `balance#<playerId>` after every debit/credit — queued in order, never awaited by the spin, failures only logged. `playerId` must be unique across the platform. The Centrifugo connection token has its own secret (`CENTRIFUGO_TOKEN_SECRET`), which must differ from `SESSION_JWT_SECRET`.
+- **Redis** is the Centrifugo engine: a broker between Centrifugo nodes and the channel history. Balance channels use cache recovery (`history_size: 1`), so a client that reconnects gets the latest balance it missed. A brand-new client has nothing to recover and takes its starting balance over HTTP (profile / `GET /v1/balance`). Redis is not exposed to the host. Money never lives in Redis; the ledger goes to Postgres.
+- **Git Bash on Windows** rewrites arguments that start with `/` into Windows paths (e.g. in `docker run ... --config=/x`). Set `MSYS_NO_PATHCONV=1` for such commands.
 
 ## Code conventions
 

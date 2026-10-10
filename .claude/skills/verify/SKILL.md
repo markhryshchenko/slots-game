@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run the full Cardano Play project check with one script — Node/env, typecheck, exact math reference numbers from the sandbox, build, and an HTTP flow (profile → spin → balance plus 401/400/404 cases) against a temporary server. Use after any code change, before saying a task is done, and before every commit.
+description: Run the full Cardano Play project check with one script — Node/env, typecheck, exact math reference numbers from the sandbox, build, an HTTP flow (profile → spin → balance plus 401/400/404 cases) against a temporary server, and the real-time balance push over Centrifugo when it is running. Use after any code change, before saying a task is done, and before every commit.
 ---
 
 # Verify
@@ -23,6 +23,7 @@ Every check prints `PASS` or `FAIL`. The script exits with 1 if anything failed,
 | 4 | `npm run build` | Compile error in `src/` |
 | 5 | Built server starts on port 3999 | Startup error (config, game registry, invalid game config); the log path is printed |
 | 6 | HTTP flow: `/health`, `POST /v1/profile`, spin 100 → `roundId`, `/v1/balance` equals the spin balance, 401 without token, 400 for bet 101, 404 for an unknown game | API contract or wallet/session regression |
+| 7 | Realtime: `npm run watch:balance` — subscribe over Centrifugo, 3 spins, every debit/credit pushed in order, last push = last spin balance, a reconnect recovers the missed balance from Redis history, another player's subscription denied | Push path broken (`PublishingWallet`, Centrifugo or Redis config, token secret). **SKIP** (not FAIL) when Centrifugo is not running — start it with `docker compose up -d` |
 
 The server runs on port **3999** (override with `SMOKE_PORT`), so it does not clash with a `npm run dev` on 3000. It is always stopped on exit, including after a failure.
 
