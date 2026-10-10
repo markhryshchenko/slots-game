@@ -1,17 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import type { NewSession, Session } from "./Session.js";
+import type { SessionStore } from "./SessionStore.js";
 
 /**
  * Issues and checks session tokens. The token is a signed JWT (HS256) that
  * points to a session kept on the server, so a session can also be ended
- * server-side, not only by waiting for the token to expire.
+ * server-side (logout), not only by waiting for the token to expire.
  */
 export class SessionService {
-  private readonly sessions = new Map<string, Session>();
   private readonly key: Uint8Array;
 
   constructor(
+    private readonly store: SessionStore,
     secret: string,
     private readonly ttlSeconds: number,
   ) {
@@ -26,7 +27,8 @@ export class SessionService {
       expiresAt: new Date(Date.now() + this.ttlSeconds * 1000),
     };
 
-    this.sessions.set(session.sessionId, session);
+    // The stored session and the token expire together.
+    await this.store.save(session, this.ttlSeconds);
 
     const token = await new SignJWT({ sid: session.sessionId })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -38,7 +40,7 @@ export class SessionService {
     return { session, token };
   }
 
-  /** Returns the session for a valid, unexpired token, otherwise undefined. */
+  /** Returns the session for a valid, unexpired, not revoked token, otherwise undefined. */
   async authenticate(token: string): Promise<Session | undefined> {
     let sessionId: unknown;
     let subject: unknown;
@@ -55,17 +57,22 @@ export class SessionService {
       return undefined;
     }
 
-    const session = this.sessions.get(sessionId);
+    const session = await this.store.find(sessionId);
 
     if (!session || session.subject !== subject) {
       return undefined;
     }
 
     if (session.expiresAt.getTime() <= Date.now()) {
-      this.sessions.delete(sessionId);
+      await this.store.delete(sessionId);
       return undefined;
     }
 
     return session;
+  }
+
+  /** Ends a session before its expiry: its token stops working at once. */
+  async revoke(sessionId: string): Promise<void> {
+    await this.store.delete(sessionId);
   }
 }

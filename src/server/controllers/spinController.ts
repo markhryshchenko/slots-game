@@ -8,7 +8,7 @@ export async function spinController(req: Request, res: Response): Promise<void>
   if (typeof bet !== "number" || !Number.isInteger(bet) || bet <= 0) {
     res
       .status(400)
-      .json({ error: "bet must be a positive integer amount in cents" });
+      .json({ error: "bet must be a positive integer amount in minor units" });
     return;
   }
 

@@ -52,11 +52,14 @@ check "Node >= 24 (found $(node -v 2>/dev/null || echo none))" test "$NODE_MAJOR
 check ".env has SESSION_JWT_SECRET (>= 32 chars)" grep -qE '^SESSION_JWT_SECRET=.{32,}' .env
 check ".env has Centrifugo secrets" grep -qE '^CENTRIFUGO_TOKEN_SECRET=.{32,}' .env
 check ".env has DATABASE_URL" grep -qE '^DATABASE_URL=postgres' .env
+check ".env has REDIS_URL" grep -qE '^REDIS_URL=redis' .env
 # The HTTP flow logs in through the demo operator, which is off unless enabled.
 check ".env has DEMO_OPERATOR_ENABLED=true (local only)" grep -qE '^DEMO_OPERATOR_ENABLED=true' .env
 # The wallet lives in Postgres: without it the server cannot start.
 check "Postgres is up (docker compose)" \
   sh -c 'docker compose exec -T postgres pg_isready -U slots -d slots >/dev/null 2>&1'
+# Sessions live in Redis; REDISCLI_AUTH inside the container carries the password.
+check "Redis is up and answers PING (docker compose)"   sh -c 'test "$(docker compose exec -T redis redis-cli ping 2>/dev/null | tr -d "")" = PONG'
 if [ "$FAILED" -ne 0 ]; then
   echo "Environment is not ready: run 'nvm use', create .env from .env.example, 'docker compose up -d', 'npm run db:deploy'."
   exit 1
@@ -129,6 +132,35 @@ if [ -n "$SERVER_PID" ] && port_listening; then
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":101}')" = 400
   check "unknown game -> 404" test "$(status -X POST "$BASE/v1/games/unknown/spin" \
     -H "$JSON_HEADER" -H "Authorization: Bearer $TOKEN" -d '{"bet":100}')" = 404
+
+  # Currencies, rates and limits: the bet ladder belongs to the operator and
+  # the currency, and balanceFloat follows the currency's exponent.
+  RATES=$(curl -s "$BASE/v1/rates")
+  check "GET /v1/rates -> snapshot with jpy" test "$(json 'typeof o.rates?.jpy' <<<"$RATES")" = number
+  LIMITS=$(curl -s "$BASE/v1/limits" -H "Authorization: Bearer $TOKEN")
+  check "GET /v1/limits -> defaultBet is one of betLevels" \
+    test "$(json 'o.betLevels.includes(o.defaultBet) && o.currency === "usd"' <<<"$LIMITS")" = true
+
+  for CUR in jpy kwd usdt; do
+    CUR_PROFILE=$(curl -s -X POST "$BASE/v1/profile" -H "$JSON_HEADER" \
+      -d "{\"token\":\"smoke-$CUR-$(date +%s)-$RANDOM\",\"cid\":\"democustomer\",\"gameId\":\"sevenslice\",\"currency\":\"$CUR\"}")
+    CUR_TOKEN=$(json 'o.sessionToken ?? ""' <<<"$CUR_PROFILE")
+    EXPONENT=$(json 'o.currencyExponent ?? ""' <<<"$CUR_PROFILE")
+    DEFAULT_BET=$(curl -s "$BASE/v1/limits" -H "Authorization: Bearer $CUR_TOKEN" | json 'o.defaultBet ?? ""')
+    CUR_SPIN=$(curl -s -X POST "$BASE/v1/games/sevenslice/spin" -H "$JSON_HEADER" \
+      -H "Authorization: Bearer $CUR_TOKEN" -d "{\"bet\":${DEFAULT_BET:-0}}")
+    check "$CUR: profile -> limits -> spin defaultBet $DEFAULT_BET, balanceFloat = balance / 10^$EXPONENT" \
+      test "$(json "o.currency === '$CUR' && o.balanceFloat === o.balance / 10 ** $EXPONENT" <<<"$CUR_SPIN")" = true
+  done
+  # 100 is a valid usd bet but not on the usdt ladder (micro-USDT).
+  check "usdt session, bet 100 -> 400" test "$(status -X POST "$BASE/v1/games/sevenslice/spin" \
+    -H "$JSON_HEADER" -H "Authorization: Bearer $CUR_TOKEN" -d '{"bet":100}')" = 400
+  check "unsupported currency -> 400" test "$(status -X POST "$BASE/v1/profile" -H "$JSON_HEADER" \
+    -d '{"token":"smoke-gbp","cid":"democustomer","gameId":"sevenslice","currency":"gbp"}')" = 400
+
+  # Logout ends the server-side session: the same token stops working at once.
+  check "POST /v1/logout -> 204" test "$(status -X POST "$BASE/v1/logout"     -H "Authorization: Bearer $CUR_TOKEN")" = 204
+  check "token after logout -> 401" test "$(status "$BASE/v1/balance"     -H "Authorization: Bearer $CUR_TOKEN")" = 401
 
   # Security: errors are JSON and never leak a stack trace or file paths.
   BROKEN=$(curl -s -w ' %{http_code}' -X POST "$BASE/v1/profile" -H "$JSON_HEADER" -d '{"token": broken')

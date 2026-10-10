@@ -12,6 +12,8 @@ export interface RoundSettlement {
   currency: string;
   betCents: number;
   totalWinCents: number;
+  /** totalWinCents was capped at the operator max win. */
+  maxWinReached: boolean;
   stops: readonly number[];
   grid: readonly (readonly string[])[];
   wins: readonly unknown[];
@@ -25,6 +27,7 @@ export interface RoundRecord {
   betCents: number;
   totalWinCents: number;
   balanceAfterCents: number;
+  maxWinReached: boolean;
   stops: unknown;
   grid: unknown;
   wins: unknown;

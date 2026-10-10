@@ -1,5 +1,5 @@
 import type { OutboxMessage, PrismaClient } from "../../generated/prisma/client.js";
-import { fromCents } from "../../core/money.js";
+import { toDisplayAmount } from "../currencies/currencies.js";
 import type { RealtimePublisher } from "../realtime/RealtimePublisher.js";
 import { balanceChannel } from "../realtime/RealtimePublisher.js";
 import { BALANCE_CHANGED, type BalanceChangedEvent } from "./events.js";
@@ -130,10 +130,10 @@ export class OutboxRelay {
     const { playerId, ...update } = message.payload as unknown as BalanceChangedEvent;
 
     // balanceFloat is a human-readable copy for debugging; it is derived here,
-    // not stored in the event, and clients compute with `balance` (cents).
+    // not stored in the event, and clients compute with `balance` (minor units).
     await this.publisher.publish(balanceChannel(playerId), {
       ...update,
-      balanceFloat: fromCents(update.balance),
+      balanceFloat: toDisplayAmount(update.balance, update.currency),
     });
   }
 

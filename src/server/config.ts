@@ -30,6 +30,7 @@ if (sessionJwtSecret === centrifugoTokenSecret) {
 export const config = {
   port: Number(process.env.PORT ?? 3000),
   databaseUrl: required("DATABASE_URL"),
+  redisUrl: required("REDIS_URL"),
   // Secure default: off unless set to exactly "true". Never enable in production.
   demoOperatorEnabled: process.env.DEMO_OPERATOR_ENABLED === "true",
   sessionJwtSecret,
@@ -38,6 +39,9 @@ export const config = {
     apiUrl: process.env.CENTRIFUGO_API_URL ?? "http://localhost:9000/api",
     apiKey: secret("CENTRIFUGO_API_KEY"),
     tokenSecret: centrifugoTokenSecret,
+    // Short on purpose: Centrifugo cannot revoke a token, so this bounds how
+    // long a copied token works after logout. Renewed via POST /v1/realtime/token.
+    tokenTtlSeconds: Number(process.env.CENTRIFUGO_TOKEN_TTL_SECONDS ?? 300),
     wsUrl: process.env.CENTRIFUGO_WS_URL ?? "ws://localhost:9000/connection/websocket",
   },
 };

@@ -1,6 +1,9 @@
 import { createApp } from "./app.js";
 import { config } from "./config.js";
-import { outboxRelay, prisma } from "./platform.js";
+import { outboxRelay, prisma, redis } from "./platform.js";
+
+// Sessions are in Redis: without it no request could be authenticated.
+await redis.connect();
 
 const server = createApp().listen(config.port, () => {
   console.log(`Server listening on port ${config.port}`);
@@ -19,6 +22,7 @@ async function shutdown(signal: string): Promise<void> {
   server.close();
   await outboxRelay.stop();
   await prisma.$disconnect();
+  await redis.quit();
   process.exit(0);
 }
 

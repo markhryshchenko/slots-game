@@ -4,7 +4,8 @@ import type { Session } from "../../platform/sessions/Session.js";
 import type { RoundSettler } from "../../platform/rounds/RoundSettler.js";
 import { SlotMachine } from "../../engines/slot/SlotMachine.js";
 import { CryptoRNG } from "../../core/CryptoRNG.js";
-import { fromCents } from "../../core/money.js";
+import { toDisplayAmount } from "../../platform/currencies/currencies.js";
+import { getSessionLimits } from "../../platform/operators/registry.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
 
 export class InvalidBetError extends Error {
@@ -31,17 +32,16 @@ export class GameService {
     return this.game.gameId;
   }
 
-  get currency(): string {
-    return this.game.currency;
+  get paylinesCount(): number {
+    return this.game.mathProfile.paylines.length;
   }
 
-  async spin(session: Session, betCents: number) {
-    if (!this.game.betLevels.includes(betCents)) {
-      throw new InvalidBetError("Bet is not one of the allowed bet levels");
-    }
+  async spin(session: Session, bet: number) {
+    // Bets and the win cap belong to the operator and the session's currency.
+    const limits = getSessionLimits(session.operatorId, session.currency);
 
-    if (session.currency !== this.game.currency) {
-      throw new InvalidBetError("Session currency does not match the game currency");
+    if (!limits.betLevels.includes(bet)) {
+      throw new InvalidBetError(`Bet is not one of the allowed bet levels in ${session.currency}`);
     }
 
     const roundId = randomUUID();
@@ -49,7 +49,11 @@ export class GameService {
     // The outcome is pure computation. It is settled — debit, credit, round
     // record, notifications — in one transaction and returned only after that
     // commit; if the bet cannot be paid, it is discarded and never shown.
-    const result = this.machine.spin(betCents);
+    const result = this.machine.spin(bet);
+
+    // Line wins stay as computed (the replay shows them); only the payout is capped.
+    const maxWinReached = result.totalWin > limits.maxWin;
+    const totalWin = maxWinReached ? limits.maxWin : result.totalWin;
 
     const balance = await this.settler.settle({
       roundId,
@@ -58,9 +62,10 @@ export class GameService {
       sessionId: session.sessionId,
       gameId: this.game.gameId,
       mathProfileId: this.game.mathProfile.id,
-      currency: this.game.currency,
-      betCents,
-      totalWinCents: result.totalWin,
+      currency: session.currency,
+      betCents: bet,
+      totalWinCents: totalWin,
+      maxWinReached,
       stops: result.stops,
       grid: result.grid,
       wins: result.wins,
@@ -69,11 +74,12 @@ export class GameService {
     return {
       roundId,
       currency: balance.currency,
-      bet: betCents,
-      totalWin: result.totalWin,
+      bet,
+      totalWin,
+      maxWinReached,
       balance: balance.balanceCents,
-      // Human-readable copy for debugging only; clients compute with `balance` (cents).
-      balanceFloat: fromCents(balance.balanceCents),
+      // Human-readable copy for debugging only; clients compute with `balance` (minor units).
+      balanceFloat: toDisplayAmount(balance.balanceCents, balance.currency),
       stops: result.stops,
       grid: result.grid,
       wins: result.wins,

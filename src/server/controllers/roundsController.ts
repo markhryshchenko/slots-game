@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { fromCents } from "../../core/money.js";
+import { toDisplayAmount } from "../../platform/currencies/currencies.js";
 import type { RoundRecord } from "../../platform/rounds/RoundSettler.js";
 import { rounds } from "../platform.js";
 
@@ -45,9 +45,10 @@ function toResponse(record: RoundRecord) {
     currency: record.currency,
     bet: record.betCents,
     totalWin: record.totalWinCents,
+    maxWinReached: record.maxWinReached,
     balanceAfter: record.balanceAfterCents,
-    // Human-readable copy for debugging only; clients compute with cents.
-    balanceAfterFloat: fromCents(record.balanceAfterCents),
+    // Human-readable copy for debugging only; clients compute with minor units.
+    balanceAfterFloat: toDisplayAmount(record.balanceAfterCents, record.currency),
     stops: record.stops,
     grid: record.grid,
     wins: record.wins,

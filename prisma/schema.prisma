@@ -54,6 +54,8 @@ model GameRound {
   betCents          BigInt
   totalWinCents     BigInt
   balanceAfterCents BigInt
+  /// totalWinCents was capped at the operator's maxWin; replaying the stops gives a larger win.
+  maxWinReached     Boolean  @default(false)
   stops             Json
   grid              Json
   wins              Json

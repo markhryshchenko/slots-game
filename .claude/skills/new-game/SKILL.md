@@ -29,17 +29,17 @@ If the new game needs anything else (5×3, wild, scatter, ways, free spins, casc
 3. **`src/games/<gameId>/math/<profile>.ts`** — `export const <profile>: MathConfig<<Game>Symbol> = { id, targetRtp, reels, paylines, paytable }`. Build and verify it with the **`math-profile`** skill; never copy another game's numbers without re-verifying.
 4. **`src/games/<gameId>/config.ts`** — a `GameConfig`:
    - `gameId`;
-   - `currency`: lowercase ISO 4217, must equal the currency of the operators that will launch it;
    - `symbols: Object.values(SYMBOLS)`;
-   - `mathProfile`;
-   - `betLevels`: integer cents, strictly ascending, each divisible by the number of paylines.
+   - `mathProfile`.
+
+   A game has no currency and no bet levels: those are operator limits per currency in `src/platform/operators/registry.ts`. Every bet level of every operator must be divisible by the new game's paylines count; if it is not, pick a paylines count that fits the existing ladders or change the ladders on purpose.
 5. **Register** one line in `src/games/registry.ts`. Nothing in routes, middleware or controllers changes.
 6. **Verify:**
    - run the `verify` skill;
    - then start the server and call `POST /v1/profile` with `{"token":"t","cid":"democustomer","gameId":"<gameId>"}`;
    - spin it with the returned `sessionToken`.
 
-   `validateGameConfig` runs at startup and rejects bad bet levels or undeclared symbols, so a server that starts is already a good sign.
+   `validateGameConfig` (undeclared symbols, no paylines) and `validateOperatorConfig` (bet levels against the paylines of every game) run at startup, so a server that starts is already a good sign.
 
 ## Do not
 

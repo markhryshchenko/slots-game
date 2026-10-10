@@ -37,7 +37,8 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "express": "^5.2.1",
-    "jose": "^6.2.12"
+    "jose": "^6.2.12",
+    "redis": "^5.12.1"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
