@@ -1,7 +1,6 @@
 import type { GameConfig } from "../../games/GameConfig.js";
 import { SlotMachine } from "../../engines/slot/SlotMachine.js";
 import { MathRNG } from "../../core/MathRNG.js";
-import { sevenSlice } from "../../games/sevenslice/config.js";
 import { validateGameConfig } from "../../games/validateGameConfig.js";
 
 export class GameService {
@@ -44,5 +43,3 @@ export class GameService {
     };
   }
 }
-
-export const gameService = new GameService(sevenSlice);

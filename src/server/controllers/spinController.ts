@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import { gameService } from "../services/GameService.js";
 
 export function spinController(req: Request, res: Response): void {
   const bet: unknown = req.body?.bet;
@@ -12,7 +11,7 @@ export function spinController(req: Request, res: Response): void {
   }
 
   try {
-    res.json(gameService.spin(bet));
+    res.json(res.locals.gameService.spin(bet));
   } catch (error) {
     res.status(400).json({ error: (error as Error).message });
   }

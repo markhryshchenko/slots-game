@@ -5,4 +5,4 @@ import { gameRoutes } from "./gameRoutes.js";
 export const routes = Router();
 
 routes.use(healthRoutes);
-routes.use(gameRoutes);
+routes.use("/v1/games/:gameId", gameRoutes);
